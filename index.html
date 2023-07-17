@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+    <head>
+    </head>
+    <body>
+        <script type="text/javascript" src="./binl_md5.js"></script>
+        <script type="text/javascript" src="./ucec.js"></script>
+        <script type="text/javascript">
+            const romPickerOptions = {
+                types: [
+                    {
+                        description: "shin engine ROM files",
+                        accept: {
+                            "application/x-shin-rom": ".rom"
+                        }
+                    }
+                ]
+            };
+
+            async function readRom() {
+                const [file] = await window.showOpenFilePicker(romPickerOptions);
+                const fileBlob = await file.getFile();
+                romFile = await readRomFile(fileBlob);
+                console.log(romFile);
+            }
+
+            async function rewriteRom() {
+                const [file] = await window.showOpenFilePicker(romPickerOptions);
+                const fileBlob = await file.getFile();
+                const romFile = await readRomFile(fileBlob);
+
+                console.log(romFile);
+
+                const newHandle = await window.showSaveFilePicker();
+                const writableStream = await newHandle.createWritable();
+                await writeRomFile(writableStream, romFile);
+                await writableStream.close();
+            }
+        </script>
+        <button onclick="readRom()">read rom</button>
+        <button onclick="rewriteRom()">rewrite rom</button>
+    </body>
+</html>
