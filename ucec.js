@@ -106,6 +106,25 @@ class WriterPositionTracker {
     }
 }
 
+// Wraps a File (Blob) to act as a data source for ROM file editing
+class FileDataSource {
+    constructor(fileBlob) {
+        this.fileBlob = fileBlob;
+    }
+
+    async writeTo(w) {
+        const r = this.fileBlob.stream().getReader();
+
+        while(true) {
+            const chunk = await r.read();
+            if(chunk.done) break;
+            await w.write(chunk.value);
+        }
+
+        await r.cancel();
+    }
+}
+
 function arrayCompare(array, other) {
     for(let i = 0; i < array.length; i++) {
         if(array[i] !== other[i]) return false;
@@ -222,6 +241,7 @@ async function writeRomFile(writer, romFile) {
         const folder = romFile.folders[oldOffset];
         for(const file of folder) {
             if(file.isFolder) continue;
+            if(file.token) continue;
 
             fileDataIndex[file.flatOffset] = file;
             fileFlatOffsets.push(file.flatOffset);
@@ -273,6 +293,25 @@ async function writeRomFile(writer, romFile) {
 
         // Align to offset
         await w.align(romFile.offsetMul);
+    }
+
+    // Write data for new files that were not in the old rom file
+    for(const oldOffset in romFile.folders) {
+        const folder = romFile.folders[oldOffset];
+        for(const file of folder) {
+            if(file.isFolder) continue;
+            if(!file.token) continue;
+            if(!file.dataProvider) throw new Error('File contains token but no dataProvider');
+
+            // Write data from provider, like above
+            const oldPos = w.position;
+            await file.dataProvider.writeTo(w);
+            newFileMetadata[file.token] = {
+                length: w.position - oldPos,
+                flatOffset: oldPos / romFile.offsetMul
+            }
+            await w.align(romFile.offsetMul);
+        }
     }
 
     const headerBuffer = new ArrayBuffer(romFile.leastFlatOffset * romFile.offsetMul - romFile.headerStart);
@@ -337,10 +376,10 @@ async function writeRomFile(writer, romFile) {
             header.setUint32(headerPos, firstU32, true);
             headerPos += 4;
 
-            const meta = (file.isFolder ? newFolderMetadata : newFileMetadata)[file.flatOffset];
-            if(meta == null) {
-                throw new Error('Could not find new metadata for file: ' + file)
-            }
+            if(file.isFolder && file.token) throw new Error('Cannot write a folder with a token');
+
+            const meta = (file.isFolder ? newFolderMetadata : newFileMetadata)[file.token || file.flatOffset];
+            if(meta == null) throw new Error('Could not find new metadata for file: ' + file);
 
             // Sanity check
             if(file.name === '.' && (meta.flatOffset * FOLDER_OFFSET_MUL) !== start) {
@@ -383,4 +422,101 @@ async function writeRomFile(writer, romFile) {
     // Align the end of the file
     const a = romFile.offsetMul - 1;
     writer.truncate((w.length + a) & ~a);
+}
+
+function insertFileIntoFolder(folder, file) {
+    for(let i = 0; i < folder.length; i++) {
+        // Ignoring the case where it would insert at the beginning,
+        // since that should always be occupied by the . and .. folders
+        if(folder[i].name < file.name && (i === folder.length - 1 || folder[i + 1].name > file.name)) {
+            folder.splice(i + 1, 0, file);
+            return;
+        }
+    }
+    throw new Error('could not find suitable place to insert');
+}
+
+function addNewFolderToRom(romFile, parentFlatOffset, name) {
+    const maxFolderFlatOffset = Object.keys(romFile.folders).reduce((a, b) => a < +b ? +b : a, 0);
+    const newFlatOffset = maxFolderFlatOffset + 1;
+
+    romFile.folders[newFlatOffset] = [
+        {
+            name: '.',
+            isFolder: true,
+            flatOffset: newFlatOffset,
+            length: null
+        },
+        {
+            name: '..',
+            isFolder: true,
+            flatOffset: parentFlatOffset,
+            length: null
+        }
+    ];
+
+    const fileInParentFolder = {
+        name: name,
+        isFolder: true,
+        flatOffset: newFlatOffset,
+        length: null
+    }
+
+    insertFileIntoFolder(romFile.folders[parentFlatOffset], fileInParentFolder);
+    return fileInParentFolder;
+}
+
+// Path must be specified as an array (like ['voice', '27', 'bea_03700_.nxa'])
+function patchFileInRom(romFile, path, newDataSource) {
+    // Initially refer to the root folder
+    let fileToEdit = {
+        isFolder: true,
+        flatOffset: 0
+    };
+
+    for(let i = 0; i < path.length; i++) {
+        const pathEntry = path[i];
+        const isLast = i === path.length - 1;
+        const token = path.join('/');
+
+        if(!fileToEdit.isFolder) {
+            throw new Error(`Tried to navigate into file in path ${path} (following pathEntry: ${pathEntry})`);
+        }
+
+        const currentFlatOffset = fileToEdit.flatOffset;
+        const currentFolder = romFile.folders[currentFlatOffset];
+        fileToEdit = null;
+        for(const file of currentFolder) {
+            if(file.name === pathEntry) {
+                fileToEdit = file;
+            }
+        }
+
+        if(fileToEdit == null) {
+            if(isLast) {
+                // Add file
+                const newFile = {
+                    name: pathEntry,
+                    isFolder: false,
+                    token,
+                    dataProvider: newDataSource
+                };
+                insertFileIntoFolder(currentFolder, newFile);
+            } else {
+                // Add folder
+                fileToEdit = addNewFolderToRom(romFile, currentFlatOffset, pathEntry);
+            }
+        } else {
+            if(isLast) {
+                if(fileToEdit.isFolder) throw new Error('Tried to overwrite folder with file');
+
+                // Change file
+                file.token = token;
+                file.dataProvider = newDataSource;
+            }
+
+            // Otherwise, nothing to do. We'll resolve the folder in the next iteration
+            // (or throw an error if trying to resolve a file)
+        }
+    }
 }

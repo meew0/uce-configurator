@@ -17,27 +17,60 @@
                 ]
             };
 
-            async function readRom() {
+            const fntPickerOptions = {
+                types: [
+                    {
+                        description: "shin engine font files",
+                        accept: {
+                            "application/x-shin-fnt": ".fnt"
+                        }
+                    }
+                ]
+            };
+
+            async function selectAndReadRomFile() {
                 const [file] = await window.showOpenFilePicker(romPickerOptions);
                 const fileBlob = await file.getFile();
-                romFile = await readRomFile(fileBlob);
-                console.log(romFile);
+                return await readRomFile(fileBlob);
             }
 
-            async function rewriteRom() {
-                const [file] = await window.showOpenFilePicker(romPickerOptions);
+            async function selectFileAsDataSource(pickerOptions) {
+                const [file] = await window.showOpenFilePicker(pickerOptions);
                 const fileBlob = await file.getFile();
-                const romFile = await readRomFile(fileBlob);
+                return new FileDataSource(fileBlob);
+            }
 
-                console.log(romFile);
-
+            async function selectAndWriteRomFile(romFile) {
                 const newHandle = await window.showSaveFilePicker();
                 const writableStream = await newHandle.createWritable();
                 await writeRomFile(writableStream, romFile);
                 await writableStream.close();
             }
+
+            async function readRom() {
+                console.log(await selectAndReadRomFile());
+            }
+
+            async function rewriteRom() {
+                const romFile = await selectAndReadRomFile();
+                console.log(romFile);
+                await selectAndWriteRomFile(romFile);
+            }
+
+            async function changeFonts() {
+                const romFile = await selectAndReadRomFile();
+                const regularFnt = await selectFileAsDataSource(fntPickerOptions);
+                const boldFnt = await selectFileAsDataSource(fntPickerOptions);
+
+                patchFileInRom(romFile, ['newrodin-medium.fnt'], regularFnt);
+                patchFileInRom(romFile, ['newrodin-bold.fnt'], boldFnt);
+                console.log(romFile);
+
+                await selectAndWriteRomFile(romFile);
+            }
         </script>
         <button onclick="readRom()">read rom</button>
         <button onclick="rewriteRom()">rewrite rom</button>
+        <button onclick="changeFonts()">change fonts</button>
     </body>
 </html>
