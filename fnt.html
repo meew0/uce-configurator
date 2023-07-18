@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+    <head>
+    </head>
+    <body>
+        <script type="text/javascript" src="./utils.js"></script>
+        <script type="text/javascript" src="./fnt.js"></script>
+        <script type="text/javascript">
+            const fntPickerOptions = {
+                types: [
+                    {
+                        description: "shin engine font files",
+                        accept: {
+                            "application/x-shin-fnt": ".fnt"
+                        }
+                    }
+                ]
+            };
+
+            async function selectAndReadFntFile() {
+                const [file] = await window.showOpenFilePicker(fntPickerOptions);
+                const fileBlob = await file.getFile();
+                return await readFntFile(fileBlob);
+            }
+
+            async function readFnt() {
+                console.log(await selectAndReadFntFile());
+            }
+        </script>
+        <button onclick="readFnt()">read fnt</button>
+    </body>
+</html>
