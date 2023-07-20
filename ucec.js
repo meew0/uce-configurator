@@ -39,6 +39,33 @@ const ROM2 = [82, 79, 77, 50];
 const FOLDER_OFFSET_MUL = 16;
 const FOLDER_ALIGN = FOLDER_OFFSET_MUL - 1;
 
+function newRomFile() {
+    return {
+        val1: 1,
+        val2: 1,
+        headerStart: 32,
+        folders: {
+            0: [
+                {
+                    isFolder: true,
+                    flatOffset: 0,
+                    length: null,
+                    name: '.'
+                },
+                {
+                    isFolder: true,
+                    flatOffset: 0,
+                    length: null,
+                    name: '..'
+                },
+            ]
+        },
+        leastFlatOffset: 291,
+        offsetMul: 512,
+        provideDataReader: async () => null
+    };
+}
+
 async function readRomFile(fileBlob) {
     const reader = fileBlob.stream().getReader();
     let r = new ReaderWrapper(reader);

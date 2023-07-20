@@ -48,6 +48,23 @@
                 await writableStream.close();
             }
 
+            async function* getFilesRecursively(entry, base) {
+                // Skip first level
+                let relativePath = base == null ? [] : base.concat([entry.name]);
+
+                if (entry.kind === "file") {
+                    const file = await entry.getFile();
+                    if (file !== null) {
+                        file.relativePath = relativePath;
+                        yield file;
+                    }
+                } else if (entry.kind === "directory") {
+                    for await (const handle of entry.values()) {
+                        yield* getFilesRecursively(handle, relativePath);
+                    }
+                }
+            }
+
             async function readRom() {
                 console.log(await selectAndReadRomFile());
             }
@@ -69,9 +86,21 @@
 
                 await selectAndWriteRomFile(romFile);
             }
+
+            async function dirToRom() {
+                const directory = await window.showDirectoryPicker();
+                const romFile = newRomFile();
+                for await (const file of getFilesRecursively(directory)) {
+                    const dataSource = new FileDataSource(file);
+                    patchFileInRom(romFile, file.relativePath, dataSource);
+                }
+                console.log(romFile);
+                await selectAndWriteRomFile(romFile);
+            }
         </script>
         <button onclick="readRom()">read rom</button>
         <button onclick="rewriteRom()">rewrite rom</button>
         <button onclick="changeFonts()">change fonts</button>
+        <button onclick="dirToRom()">directory to rom</button>
     </body>
 </html>
