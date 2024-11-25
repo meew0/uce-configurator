@@ -17,6 +17,19 @@
                 ]
             };
 
+            const otPickerOptions = {
+                types: [
+                    {
+                        description: "Font files",
+                        accept: {
+                            "font/otf": ".otf",
+                            "font/ttf": ".ttf",
+                            "font/woff": ".woff"
+                        }
+                    }
+                ]
+            };
+
             async function selectAndReadFntFile() {
                 const [file] = await window.showOpenFilePicker(fntPickerOptions);
                 const fileBlob = await file.getFile();
@@ -26,7 +39,40 @@
             async function readFnt() {
                 console.log(await selectAndReadFntFile());
             }
+
+            w = new Worker('fntWorker.js');
+            w.onmessage = (event) => {
+                if(event.data._commands) {
+                    w.commands = event.data;
+                    return;
+                }
+
+                switch(event.data.command) {
+                    case w.commands.fontLoaded:
+                        console.log(event.data.payload);
+                        const payload = {
+                            fontName: 'Caterina Bold',
+                            index: 9
+                        }
+                        w.postMessage({ command: w.commands.processGlyph, payload });
+                        break;
+                    case w.commands.glyphResult:
+                        const bitmap = event.data.payload;
+                        document.getElementById('glyphCanvas').getContext('bitmaprenderer').transferFromImageBitmap(bitmap);
+                        break;
+                }
+            }
+            w.postMessage(null);
+
+            async function readOT() {
+                const [file] = await window.showOpenFilePicker(otPickerOptions);
+                const fileBlob = await file.getFile();
+                const buffer = await fileBlob.arrayBuffer();
+                w.postMessage({ command: w.commands.loadFont, payload: buffer }, [buffer]);
+            }
         </script>
         <button onclick="readFnt()">read fnt</button>
+        <button onclick="readOT()">read OT</button>
+        <canvas id="glyphCanvas" width="256" height="128"></canvas>
     </body>
 </html>
