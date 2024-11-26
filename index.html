@@ -97,10 +97,18 @@
                 console.log(romFile);
                 await selectAndWriteRomFile(romFile);
             }
+
+            async function readScenario() {
+                const ds = new DecompressionStream("gzip");
+                const response = await fetch('data/main_snr.json.gz');
+                const decompressedStream = response.body.pipeThrough(ds);
+                console.log(await new Response(decompressedStream).json());
+            }
         </script>
         <button onclick="readRom()">read rom</button>
         <button onclick="rewriteRom()">rewrite rom</button>
         <button onclick="changeFonts()">change fonts</button>
         <button onclick="dirToRom()">directory to rom</button>
+        <button onclick="readScenario()">read scenario</button>
     </body>
 </html>
