@@ -3,9 +3,13 @@
     <head>
     </head>
     <body>
-        <script type="text/javascript" src="./utils.js"></script>
-        <script type="text/javascript" src="./binl_md5.js"></script>
-        <script type="text/javascript" src="./ucec.js"></script>
+        <script type="text/javascript" charset="utf-8" src="./utils.js"></script>
+        <script type="text/javascript" charset="utf-8" src="./binl_md5.js"></script>
+        <script type="text/javascript" charset="utf-8" src="./shift_jis.js"></script>
+        <script type="text/javascript" charset="utf-8" src="./ucec.js"></script>
+        <script type="text/javascript" charset="utf-8" src="./fnt.js"></script>
+        <script type="text/javascript" charset="utf-8" src="./layout.js"></script>
+        <script type="text/javascript" charset="utf-8" src="./snr.js"></script>
         <script type="text/javascript">
             const romPickerOptions = {
                 types: [
@@ -29,16 +33,15 @@
                 ]
             };
 
-            async function selectAndReadRomFile() {
-                const [file] = await window.showOpenFilePicker(romPickerOptions);
-                const fileBlob = await file.getFile();
-                return await readRomFile(fileBlob);
+            var regularFnt, boldFnt;
+
+            async function selectFileAsBlob(pickerOptions) {
+                const [file] = await window.showOpenFilePicker(pickerOptions);
+                return await file.getFile();
             }
 
-            async function selectFileAsDataSource(pickerOptions) {
-                const [file] = await window.showOpenFilePicker(pickerOptions);
-                const fileBlob = await file.getFile();
-                return new FileDataSource(fileBlob);
+            async function selectAndReadRomFile() {
+                return await readRomFile(await selectFileAsBlob(romPickerOptions));
             }
 
             async function selectAndWriteRomFile(romFile) {
@@ -65,6 +68,18 @@
                 }
             }
 
+            async function fetchFont(path) {
+                const ds = new DecompressionStream("gzip");
+                const response = await fetch(path);
+                const decompressedStream = response.body.pipeThrough(ds);
+                return await new Response(decompressedStream).blob();
+            }
+
+            async function fetchNewrodin() {
+                regularFnt = await fetchFont('data/fonts/newrodin-medium.fnt.gz');
+                boldFnt = await fetchFont('data/fonts/newrodin-medium.fnt.gz');
+            }
+
             async function readRom() {
                 console.log(await selectAndReadRomFile());
             }
@@ -75,13 +90,16 @@
                 await selectAndWriteRomFile(romFile);
             }
 
+            async function loadFonts() {
+                regularFnt = await selectFileAsDataSource(fntPickerOptions);
+                boldFnt = await selectFileAsDataSource(fntPickerOptions);
+            }
+
             async function changeFonts() {
                 const romFile = await selectAndReadRomFile();
-                const regularFnt = await selectFileAsDataSource(fntPickerOptions);
-                const boldFnt = await selectFileAsDataSource(fntPickerOptions);
 
-                patchFileInRom(romFile, ['newrodin-medium.fnt'], regularFnt);
-                patchFileInRom(romFile, ['newrodin-bold.fnt'], boldFnt);
+                patchFileInRom(romFile, ['newrodin-medium.fnt'], new FileDataSource(regularFnt));
+                patchFileInRom(romFile, ['newrodin-bold.fnt'], new FileDataSource(boldFnt));
                 console.log(romFile);
 
                 await selectAndWriteRomFile(romFile);
@@ -98,17 +116,36 @@
                 await selectAndWriteRomFile(romFile);
             }
 
+            var scenario;
+
             async function readScenario() {
                 const ds = new DecompressionStream("gzip");
                 const response = await fetch('data/main_snr.json.gz');
                 const decompressedStream = response.body.pipeThrough(ds);
-                console.log(await new Response(decompressedStream).json());
+                scenario = await new Response(decompressedStream).json();
+                console.log(`Read scenario (${scenario.dialogueLineCount} dialogue lines)`);
+            }
+
+            async function writeSnr() {
+                if(regularFnt == undefined) {
+                    await fetchNewrodin();
+                }
+
+                const layouter = new WordWrapLayouter(await readFntFile(regularFnt, false), await readFntFile(boldFnt, false));
+                const compiled = compileSnr(scenario, 6, 19, 88, {}, layouter);
+
+                const newHandle = await window.showSaveFilePicker();
+                const writableStream = await newHandle.createWritable();
+                await writableStream.write(compiled);
+                await writableStream.close();
             }
         </script>
         <button onclick="readRom()">read rom</button>
         <button onclick="rewriteRom()">rewrite rom</button>
+        <button onclick="loadFonts()">load fonts</button>
         <button onclick="changeFonts()">change fonts</button>
         <button onclick="dirToRom()">directory to rom</button>
         <button onclick="readScenario()">read scenario</button>
+        <button onclick="writeSnr()">write snr</button>
     </body>
 </html>

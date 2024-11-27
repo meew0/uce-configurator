@@ -60,7 +60,7 @@ class KalSNRFile
       mode: @mode,
       tables: @tables,
       script: @script,
-      dialogue_line_count: @dialogue_line_count
+      dialogueLineCount: @dialogue_line_count
     }
   end
 
@@ -156,7 +156,7 @@ class KalSNRFile
   end
 
   def write_voices
-    @tables[:movies] = write_table(@voices) do |s, voice|
+    @tables[:voices] = write_table(@voices) do |s, voice|
       name, *vals = voice
       s.write_str(name)
       s.write(vals.pack('C*'))

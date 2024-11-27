@@ -1,6 +1,6 @@
 const FNT4 = [70, 78, 84, 52];
 
-async function readFntFile(fileBlob) {
+async function readFntFile(fileBlob, readGlyphData = true) {
     const reader = fileBlob.stream().getReader();
     let r = new ReaderWrapper(reader);
 
@@ -14,9 +14,9 @@ async function readFntFile(fileBlob) {
     const ascent = await r.readU16();
     const descent = await r.readU16();
 
-    const header = new Uint32Array(await r.readBytes(40000));
+    const header = new Uint32Array(await r.readBytes(0x40000));
 
-    const headerSorted = new Uint32Array(10000);
+    const headerSorted = new Uint32Array(0x10000);
     headerSorted.set(header);
     headerSorted.sort();
 
@@ -28,17 +28,18 @@ async function readFntFile(fileBlob) {
         if(r.pos > glyphAddress) throw new Error('read too far in FNT file');
         await r.seekAhead(glyphAddress - r.pos);
 
-        const offsetX = await r.readS8();
-        const offsetY = await r.readS8();
-        const cropWidth = await r.readU8();
-        const cropHeight = await r.readU8();
-        const frameWidth = await r.readU8();
-        const val6 = await r.readU8();
-        const dataWidth = await r.readU8();
-        const dataHeight = await r.readU8();
+        const glyphHeader = await r.readDataView(10);
+        const offsetX = glyphHeader.getInt8(0);
+        const offsetY = glyphHeader.getInt8(1);
+        const cropWidth = glyphHeader.getUint8(2);
+        const cropHeight = glyphHeader.getUint8(3);
+        const frameWidth = glyphHeader.getUint8(4);
+        const val6 = glyphHeader.getUint8(5);
+        const dataWidth = glyphHeader.getUint8(6);
+        const dataHeight = glyphHeader.getUint8(7);
+        const len = glyphHeader.getUint16(8, true);
 
-        const len = await r.readU16();
-        const glyphData = await r.readU8Array(len);
+        const glyphData = readGlyphData ? await r.readU8Array(len) : null;
 
         glyphs[glyphAddress] = {
             offsetX, offsetY, cropWidth, cropHeight, frameWidth, val6, dataWidth, dataHeight, glyphData
