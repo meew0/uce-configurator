@@ -13,12 +13,43 @@ SHIFT_JIS_REVERSE_MAPPINGS = {
   "ee 84 90" => "\xa0", # convert our private use character to Entergram's actual compact half width space
 }
 
-class StringIO
-  # Write length delimited SHIFT_JIS
+LayoutedString = Struct.new(:content)
+
+# Wrapper around StringIO that allows for some extra features
+class Buffer
+  def initialize()
+    @data = StringIO.new
+    @elements = []
+  end
+
+  def write(data)
+    @data.write(data)
+  end
+
   def write_str(str)
-    converted = KalSNRFile.to_shift_jis(str)
-    write([converted.bytes.length].pack('S<'))
-    write(converted.bytes.pack('C*'))
+    if str.is_a? LayoutedString
+      push({ type: :layout, content: str.content })
+    else
+      # Write length delimited SHIFT_JIS
+      converted = KalSNRFile.to_shift_jis(str)
+      write([converted.bytes.length].pack('S<'))
+      write(converted.bytes.pack('C*'))
+    end
+  end
+
+  def push(element = nil)
+    @elements << last_element unless last_element.empty?
+    @data.truncate(0)
+    @data.rewind
+    @elements << element unless element.nil?
+  end
+
+  def elements
+    @elements + [last_element]
+  end
+
+  def last_element
+    @data.string.unpack('C*')
   end
 end
 
@@ -170,7 +201,7 @@ class KalSNRFile
   end
 
   def write_table8
-    @tables[:table8] = write_table(@table8, size_prefix = false) do |s, entry|
+    @tables[:table8] = write_table(@table8) do |s, entry|
       name, *data = entry
       s.write_str(name)
       s.write([data.length].pack('S<'))
@@ -185,14 +216,14 @@ class KalSNRFile
   end
 
   def write_table9
-    @tables[:table9] = write_table(@table9, size_prefix = false) do |s, entry|
+    @tables[:table9] = write_table(@table9) do |s, entry|
       val1, val2, val3 = entry
       s.write([val1, val2, val3].pack('S<S<S<'))
     end
   end
 
   def write_offset10_data(data)
-    @tables[:offset10] = write_size_prefixed_data(data)
+    @tables[:offset10] = [data]
   end
 
   def character(*v)
@@ -211,7 +242,7 @@ class KalSNRFile
         segment.each do |e|
           if e.is_a? Numeric
             s.write([e].pack('C'))
-          elsif e.is_a? String
+          elsif e.is_a?(String) || e.is_a?(LayoutedString)
             s.write_str(e)
           else
             raise "Invalid type of element in segment"
@@ -224,7 +255,7 @@ class KalSNRFile
   end
 
   def write_offset12_data(data)
-    @tables[:offset12] = write_size_prefixed_data(data)
+    @tables[:offset12] = [data]
   end
 
   def tip(*v)
@@ -242,30 +273,20 @@ class KalSNRFile
     end
   end
 
-  def write_size_prefixed_data(data)
-    [data.length].pack('L<').unpack('C*') + data
-  end
-
   def write_script(script_data, entry_point, dialogue_line_count)
     @script = [[SCRIPT_MAGIC].pack('L<').unpack('C*'), { type: :ref, name: entry_point }]
     @script += script_data
     @dialogue_line_count = dialogue_line_count
   end
 
-  def write_table(table, size_prefix = true)
-    result = StringIO.new
-    result.seek(size_prefix ? 4 : 0)
+  def write_table(table)
+    result = Buffer.new
     result.write([table.length].pack('L<'))
     table.each do |entry|
       yield result, entry
     end
 
-    if size_prefix
-      result.seek(0)
-      result.write([result.length - 4].pack('L<'))
-    end
-
-    result.string.unpack('C*')
+    result.elements
   end
 
   def self.to_shift_jis(str)
@@ -302,12 +323,7 @@ def bmn(**args); BMN.new(args); end
 
 class KalScript
   def initialize(_)
-    @data = StringIO.new
-    @data.binmode
-
-    # The data that will be written to JSON
-    @out = []
-
+    @data = Buffer.new
     @dialogue_line_count = 0
   end
 
@@ -317,8 +333,7 @@ class KalScript
   attr_accessor :layouter
 
   def data
-    push
-    @out
+    @data.elements
   end
 
   def layout(text)
@@ -328,22 +343,20 @@ class KalScript
 
   def label(name)
     raise "Label can not be :null" if name == :null
-    push
-    @out << { type: :label, name: name }
+    @data.push({ type: :label, name: name })
     name
   end
 
   def ins(opcode, *data)
     if opcode == 0x86
       @dialogue_line_count += 1
-      puts "Dialogue ##{@dialogue_line_count}" if @dialogue_line_count % 100 == 0
-      push
-      @out << {
+      puts "Dialogue ##{@dialogue_line_count}" if @dialogue_line_count % 10000 == 0
+      @data.push({
         type: :dialogue,
         header: data[0..2].map(&:str).join.unpack('C*'),
         id: (data[0..1].map(&:str).join + "\0").unpack('L<').first,
         text: data[3],
-      }
+      })
       return
     end
 
@@ -379,8 +392,7 @@ class KalScript
     elsif e == :null
       @data.write("\xe0")
     elsif e.is_a? Symbol # label
-      push
-      @out << { type: :ref, name: e }
+      @data.push({ type: :ref, name: e })
     else
       raise "Invalid varlen: #{e}"
     end
@@ -397,14 +409,14 @@ class KalScript
       if e >= 0
         @data.write([0x80 | ((e & 0x700) >> 8), e & 0xff].pack('CC'))
       else
-        shifted = e + 0x1000
+        shifted = e + 0xfff
         @data.write([0x80 | ((shifted & 0xf00) >> 8), shifted & 0xff].pack('CC'))
       end
     elsif e <= 0x7ffff && e >= -0x80000
       if e >= 0
         @data.write([0x90 | ((e & 0x70000) >> 16), ((e & 0xff00) >> 8), e & 0xff].pack('CCC'))
       else
-        shifted = e + 0x100000
+        shifted = e + 0xfffff
         @data.write([0x90 | ((shifted & 0xf0000) >> 16), ((shifted & 0xff00) >> 8), shifted & 0xff].pack('CCC'))
       end
     else
@@ -422,11 +434,5 @@ class KalScript
 
     @data.write([bitmask].pack('C'))
     varlens.each { |v| write_varlen(v) }
-  end
-
-  def push
-    @out << @data.string.unpack('C*') unless @data.size == 0
-    @data.truncate(0)
-    @data.rewind
   end
 end

@@ -13,9 +13,9 @@ function compileSnr(precompiled, val1, val2, firstTable, bgmNames, layouter) {
     const tables = precompiled.tables;
 
     // Tables
-    snrPos = writeTable(snr, snrPos, tables.masks, 0x24);
-    snrPos = writeTable(snr, snrPos, tables.bgs, 0x28);
-    snrPos = writeTable(snr, snrPos, tables.bustups, 0x2c);
+    snrPos = writeTable(snr, snrPos, tables.masks, 0x24, true, layouter);
+    snrPos = writeTable(snr, snrPos, tables.bgs, 0x28, true, layouter);
+    snrPos = writeTable(snr, snrPos, tables.bustups, 0x2c, true, layouter);
 
     // BGM
     const bgmStart = snrPos;
@@ -30,19 +30,19 @@ function compileSnr(precompiled, val1, val2, firstTable, bgmNames, layouter) {
         snr.setUint16(snrPos, bgm[2], true);
         snrPos += 2;
     }
-    snr.setUint32(bgmStart, snrPos - bgmStart - 8, true);
+    snr.setUint32(bgmStart, snrPos - bgmStart - 4, true);
     snrPos = align(snrPos, 0x3);
 
     // Remaining tables
-    snrPos = writeTable(snr, snrPos, tables.ses, 0x34);
-    snrPos = writeTable(snr, snrPos, tables.movies, 0x38);
-    snrPos = writeTable(snr, snrPos, tables.voices, 0x3c);
-    snrPos = writeTable(snr, snrPos, tables.table8, 0x40);
-    snrPos = writeTable(snr, snrPos, tables.table9, 0x44);
-    snrPos = writeTable(snr, snrPos, tables.offset10, 0x48);
-    snrPos = writeTable(snr, snrPos, tables.characters, 0x4c);
-    snrPos = writeTable(snr, snrPos, tables.offset12, 0x50);
-    snrPos = writeTable(snr, snrPos, tables.tips, 0x54);
+    snrPos = writeTable(snr, snrPos, tables.ses, 0x34, true, layouter);
+    snrPos = writeTable(snr, snrPos, tables.movies, 0x38, true, layouter);
+    snrPos = writeTable(snr, snrPos, tables.voices, 0x3c, true, layouter);
+    snrPos = writeTable(snr, snrPos, tables.table8, 0x40, false, layouter);
+    snrPos = writeTable(snr, snrPos, tables.table9, 0x44, false, layouter);
+    snrPos = writeTable(snr, snrPos, tables.offset10, 0x48, true, layouter);
+    snrPos = writeTable(snr, snrPos, tables.characters, 0x4c, true, layouter);
+    snrPos = writeTable(snr, snrPos, tables.offset12, 0x50, true, layouter);
+    snrPos = writeTable(snr, snrPos, tables.tips, 0x54, true, layouter);
 
     // Script
     if(precompiled.mode == 'kal') {
@@ -85,7 +85,6 @@ function compileSnr(precompiled, val1, val2, firstTable, bgmNames, layouter) {
         }
     }
 
-    snrPos = align(snrPos, 0xf);
     snr.setUint32(0x04, snrPos, true); // File size
 
     return snrBuffer.slice(0, snrPos);
@@ -103,9 +102,18 @@ function align(pos, alignment) {
     return (pos + alignment) & ~alignment;
 }
 
-function writeTable(dataView, pos, table, offsetLocation) {
+function writeTable(dataView, pos, elements, offsetLocation, sizePrefix, layouter) {
     dataView.setUint32(offsetLocation, pos, true);
-    pos = writeBytes(dataView, pos, table);
+    const initialPos = pos;
+    if(sizePrefix) pos += 4;
+    for(const element of elements) {
+        if(element.type === 'layout') {
+            pos = writeStr(dataView, pos, layouter.layout(element.content));
+        } else {
+            pos = writeBytes(dataView, pos, element);
+        }
+    }
+    if(sizePrefix) dataView.setUint32(initialPos, pos - initialPos - 4, true);
     return align(pos, 0x3);
 }
 

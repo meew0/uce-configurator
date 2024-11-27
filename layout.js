@@ -89,7 +89,8 @@ class LayoutRun {
                     case "@z":
                     case "@c":
                     case "@s":
-                    const [parameter, text] = content.split(".", 2);
+                    const [parameter, ...tail] = content.split(".");
+                    const text = tail.join(".");
                     if (tag === "@z") {
                         // Adjust the scale for font size tags
                         this.scale = Math.min(2.0, parseInt(parameter, 10) / 100.0);
@@ -103,7 +104,7 @@ class LayoutRun {
                     const [unicodeParam, rest] = content.split(".", 2);
                     const unicodeChar = String.fromCodePoint(parseInt(unicodeParam, 10));
                     const width = this.charWidth(unicodeChar);
-                    this.appendChar(`${tag}${unicodeParam}.`, width);
+                    this.appendChar(`${tag}${unicodeParam}.`, false, width);
                     this.appendChars(rest || "");
                     break;
 

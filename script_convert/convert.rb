@@ -21,7 +21,7 @@ class WordWrapLayouter
   end
 
   def layout(str)
-    str
+    LayoutedString.new(str)
   end
 end
 
@@ -30,6 +30,7 @@ snr = KalSNRFile.new
 load 'script.rb'
 raw_apply(snr)
 
-Zlib::GzipWriter.open(ARGV[0]) do |gz|
+File.write(ARGV[0], JSON.generate(snr.data));
+Zlib::GzipWriter.open(ARGV[0] + '.gz') do |gz|
   gz.write(JSON.generate(snr.data))
 end
