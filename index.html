@@ -1,6 +1,28 @@
 <!doctype html>
 <html>
     <head>
+        <meta charset="utf-8">
+        <style>
+            body {
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+                background-position: center;
+                background-size: cover;
+                padding-bottom: 20vh;
+            }
+
+            section {
+                margin-left: calc(max(10px, 40vw - 200px));
+                padding-right: calc(max(10px, 40vw - 200px));
+            }
+
+            label.multiline {
+                display: inline-block;
+                vertical-align: top;
+            }
+
+            hr { margin: 2em 0; }
+        </style>
     </head>
     <body>
         <script type="text/javascript" charset="utf-8" src="./utils.js"></script>
@@ -140,12 +162,87 @@
                 await writableStream.close();
             }
         </script>
-        <button onclick="readRom()">read rom</button>
-        <button onclick="rewriteRom()">rewrite rom</button>
-        <button onclick="loadFonts()">load fonts</button>
-        <button onclick="changeFonts()">change fonts</button>
-        <button onclick="dirToRom()">directory to rom</button>
-        <button onclick="readScenario()">read scenario</button>
-        <button onclick="writeSnr()">write snr</button>
+
+        <section>
+            <h1>Umineko Catbox English configurator</h1>
+
+            <small>by <a href="https://github.com/meew0">meew0 / Neurochitin</a>  ·  <a href="https://github.com/meew0/uce-configurator">Project on GitHub</a></small>
+
+            <p>
+                This tool allows you to change a few aesthetic details of <a href="https://andolga.github.io/umineko-catbox-english/">Umineko Catbox English</a>, the unofficial English patch for the Nintendo Switch version of the visual novel <a href="https://vndb.org/v24">Umineko no Naku Koro ni</a>.
+            </p>
+
+            <details>
+                <summary>How to use</summary>
+                First, install UCE normally according to <a href="https://andolga.github.io/umineko-catbox-english/#applying-the-patch">the instructions</a> for whatever system you are using. The process will involve extracting some folders containing a file called “patch.rom”. Press the “Select patch.rom” button below and select that file. Then, make adjustments as desired, and use the export button to create a new patch.rom file. Finally, replace the old patch.rom file with the new one you downloaded.
+            </details>
+
+            <br>
+
+            <button onclick="0">Select patch.rom</button>
+
+            <hr>
+        </section>
+
+        <section>
+            <h2>Options</h2>
+            <h3>BGM names</h3>
+
+            <p>Change the language BGM titles are displayed in.</p>
+
+            <input type="radio" id="bgmTranslated" name="bgm" value="translated" checked />
+            <label for="bgmTranslated">Translated (e.g. “Door to Summer”, “System Zero”)</label>
+            <br>
+            <input type="radio" id="bgmRomaji" name="bgm" value="romaji" />
+            <label for="bgmRomaji">Rōmaji (e.g. “Natsu no Tobira”, “system0”)</label>
+            <br>
+            <input type="radio" id="bgmJapanese" name="bgm" value="japanese" />
+            <label for="bgmJapanese">Japanese (e.g. “夏の扉”, “システム零”)</label>
+            <br>
+            <input type="radio" id="bgmCustom" name="bgm" value="custom" />
+            <label for="bgmCustom">Custom: <input type="file" id="bgmCustomFile" name="bgmCustomFile" /></label>
+
+            <details>
+                <summary>More info on custom names</summary>
+                TBD
+            </details>
+        </section>
+
+        <section>
+            <h3>Script font</h3>
+
+            <p>Change the font in which dialogue lines, tips, and the like are displayed. Does not affect GUI buttons and prompts.</p>
+
+            <input type="radio" id="fontNewrodin" name="font" value="newrodin" checked />
+            <label for="fontNewrodin">New Rodin (default Switch font)</label>
+            <br>
+            <input type="radio" id="fontArno" name="font" value="arno" />
+            <label for="fontArno">Arno Pro (Umineko Project font)</label>
+            <br>
+            <input type="radio" id="fontCustom" name="font" value="custom" />
+            <label for="fontCustom" class="multiline">
+                Custom
+                <br>
+                Regular weight: <input type="file" id="fontCustomFileRegular" name="fontCustomFileRegular" accept=".fnt" />
+                <br>
+                Bold: <input type="file" id="fontCustomFileBold" name="fontCustomFileBold" accept=".fnt" />
+            </label>
+
+            <details>
+                <summary>More info on custom fonts</summary>
+                This tool does not directly support normal font files, they must be converted to Entergram's .fnt format first. For now you can use <a href="https://gitlab.com/Neurochitin/kaleido/-/tree/saku/fnt?ref_type=heads">Kaleido</a> to do this (instructions TBD)
+            </details>
+        </section>
+
+        <section>
+            <h3>Additional tweaks</h3>
+            <input type="checkbox" id="smallCaps" name="smallCaps" />
+            <label for="smallCaps">Small caps tweak (e.g. BERNKASTEL → <span style="font-variant: small-caps;">Bernkastel</span>, as in Umineko Project). Requires Arno Pro or a suitably generated custom font to be selected above, otherwise names will simply disappear.</label>
+            <hr>
+        </section>
+
+        <section>
+            <button onclick="0" disabled>Export customized patch.rom</button>
+        </section>
     </body>
 </html>
