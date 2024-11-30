@@ -22,6 +22,14 @@
             }
 
             hr { margin: 2em 0; }
+
+            .error {
+                color: #f00;
+            }
+
+            .warning {
+                color: #f80;
+            }
         </style>
     </head>
     <body>
@@ -161,6 +169,64 @@
                 await writableStream.write(compiled);
                 await writableStream.close();
             }
+
+            var patchRomFile;
+
+            const WARNING = '<span class="warning">WARNING:</span>';
+
+            async function selectPatchRom() {
+                const fileSelector = document.getElementById("patchRomFile");
+                const file = fileSelector.files[0];
+                const romFileStatus = document.getElementById("romFileStatus");
+
+                fileSelector.disabled = true;
+                romFileStatus.innerHTML = "<marquee>Loading ROM file, this may take a while...</marquee>";
+                romFileStatus.style.display = "";
+
+                try {
+                    patchRomFile = await readRomFile(file);
+                } catch(e) {
+                    romFileStatus.classList.add("error");
+                    romFileStatus.textContent = "Error while reading ROM file (see console for details)";
+                    console.log(e);
+                }
+
+                if(patchRomFile != undefined) {
+                    console.log(patchRomFile);
+                    const warnings = [];
+
+                    if(patchRomFile.totalFileCount !== 203 || patchRomFile.totalFolderCount !== 3) {
+                        warnings.push(`${WARNING} Expected 203 files and 3 folders`);
+                    }
+
+                    let mainSnr;
+                    for(const file of patchRomFile.folders[0]) {
+                        if(file.name === "main.snr" && !file.isFolder) mainSnr = file;
+                    }
+
+                    if(mainSnr == undefined) warnings.push(`${WARNING} Could not find main.snr`);
+                    else if(mainSnr.length !== 13099201) warnings.push(`${WARNING} Expected main.snr to be exactly 13099201 bytes`);
+
+                    const fileInfo = `${patchRomFile.totalFileCount} file${patchRomFile.totalFileCount == 1 ? '' : 's'} and ${patchRomFile.totalFolderCount} folder${patchRomFile.totalFolderCount == 1 ? '' : 's'}`
+
+                    if(warnings.length != 0) {
+                        const firstLine = `Found ${fileInfo}.`;
+                        const lastLine = "You may have loaded a patch.rom file from an old version of UCE, or one that is not from UCE at all. This tool will still work, but results may be unexpected.";
+                        warnings.push(lastLine);
+                        warnings.unshift(firstLine);
+                        romFileStatus.innerHTML = warnings.join("<br>");
+                    } else {
+                        romFileStatus.textContent = `Successfully loaded ROM file with ${fileInfo}.`;
+                    }
+
+                    document.getElementById("exportButton").disabled = false;
+                } else {
+                    document.getElementById("exportButton").disabled = true;
+                }
+
+                fileSelector.disabled = false;
+                romFileStatus.style.display = "";
+            }
         </script>
 
         <section>
@@ -174,12 +240,14 @@
 
             <details>
                 <summary>How to use</summary>
-                First, install UCE normally according to <a href="https://andolga.github.io/umineko-catbox-english/#applying-the-patch">the instructions</a> for whatever system you are using. The process will involve extracting some folders containing a file called “patch.rom”. Press the “Select patch.rom” button below and select that file. Then, make adjustments as desired, and use the export button to create a new patch.rom file. Finally, replace the old patch.rom file with the new one you downloaded.
+                First, install UCE normally according to <a href="https://andolga.github.io/umineko-catbox-english/#applying-the-patch">the instructions</a> for whatever system you are using. The process will involve extracting some folders containing a file called “patch.rom”. Press the button on the file selector below and select that file. Then, make adjustments as desired, and use the export button to create a new patch.rom file. Finally, replace the old patch.rom file with the new one you downloaded.
             </details>
 
             <br>
 
-            <button onclick="0">Select patch.rom</button>
+            Select patch.rom: <input type="file" id="patchRomFile" name="patchRomFile" accept=".rom" onchange="selectPatchRom()" />
+
+            <p id="romFileStatus" style="display: none;"></p>
 
             <hr>
         </section>
@@ -242,7 +310,7 @@
         </section>
 
         <section>
-            <button onclick="0" disabled>Export customized patch.rom</button>
+            <button onclick="0" id="exportButton" disabled>Export customized patch.rom</button>
         </section>
     </body>
 </html>

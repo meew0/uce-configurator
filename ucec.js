@@ -85,6 +85,7 @@ async function readRomFile(fileBlob) {
 
     let folders = {};
     let leastFlatOffset = null;
+    let totalFileCount = 0, totalFolderCount = 0;
     while(r.pos < headerSize) {
         let start = r.pos;
         let numFiles = await r.readU32();
@@ -114,6 +115,12 @@ async function readRomFile(fileBlob) {
             let file = filesByNamePtr[relPos];
             file.name = await r.readCStr();
             fileList.push(file);
+
+            if(file.isFolder) {
+                if(file.name !== "." && file.name !== "..") totalFolderCount += 1;
+            } else {
+                totalFileCount += 1;
+            }
         }
 
         folders[(start - headerStart) / FOLDER_OFFSET_MUL] = fileList;
@@ -132,6 +139,8 @@ async function readRomFile(fileBlob) {
         folders,
         leastFlatOffset,
         offsetMul,
+        totalFileCount,
+        totalFolderCount,
         provideDataReader: async function() {
             const r = new ReaderWrapper(fileBlob.stream().getReader());
             // Seek to the first data block
