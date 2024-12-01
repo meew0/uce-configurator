@@ -109,9 +109,11 @@
                 return await new Response(decompressedStream).blob();
             }
 
+            var newrodinRegular, newrodinBold;
+
             async function fetchNewrodin() {
-                regularFnt = await fetchFont('data/fonts/newrodin-medium.fnt.gz');
-                boldFnt = await fetchFont('data/fonts/newrodin-bold.fnt.gz');
+                newrodinRegular = regularFnt = await fetchFont('data/fonts/newrodin-medium.fnt.gz');
+                newrodinBold = boldFnt = await fetchFont('data/fonts/newrodin-bold.fnt.gz');
             }
 
             async function fetchArno() {
@@ -259,18 +261,17 @@
                 const selectedFontElement = document.querySelector('input[name="font"]:checked');
                 const selectedFont = (selectedFontElement == undefined) ? 'newrodin' : selectedFontElement.value;
 
+                await fetchNewrodin(); // we always need this for the tips
+
                 status.textContent = "Loading fonts...";
-                if(selectedFont === 'newrodin') {
-                    await fetchNewrodin();
-                } else if(selectedFont === 'arno') {
+                if(selectedFont === 'arno') {
                     await fetchArno();
-                } else {
-                    // custom
+                } else if(selectedFont === 'custom') {
                     regularFnt = document.getElementById("fontCustomFileRegular").files[0];
                     boldFnt = document.getElementById("fontCustomFileBold").files[0];
                 }
 
-                if(regularFnt == undefined || boldFnt == undefined) {
+                if(regularFnt == undefined || boldFnt == undefined || newrodinRegular == undefined || newrodinBold == undefined) {
                     status.innerHTML = '<span class="error">Failed to load fonts!</span>';
                     return;
                 }
@@ -294,11 +295,12 @@
 
                 console.log(bgmReplacement);
 
-                status.textContent = "Creating layouter...";
-                const layouter = new WordWrapLayouter(await readFntFile(regularFnt, false), await readFntFile(boldFnt, false));
+                status.textContent = "Creating layouters...";
+                const mainLayouter = new WordWrapLayouter(await readFntFile(regularFnt, false), await readFntFile(boldFnt, false));
+                const supplementaryLayouter = new WordWrapLayouter(await readFntFile(newrodinRegular, false), await readFntFile(newrodinBold, false));
 
                 status.textContent = "Compiling SNR...";
-                const compiled = compileSnr(scenario, 6, 19, 88, bgmReplacement, layouter);
+                const compiled = compileSnr(scenario, 6, 19, 88, bgmReplacement, mainLayouter, supplementaryLayouter);
 
                 status.textContent = "Patching and writing ROM file...";
                 patchFileInRom(patchRomFile, ['main.snr'], new FileDataSource(new Blob([compiled])));

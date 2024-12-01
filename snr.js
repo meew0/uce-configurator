@@ -1,4 +1,4 @@
-function compileSnr(precompiled, val1, val2, firstTable, bgmNames, layouter) {
+function compileSnr(precompiled, val1, val2, firstTable, bgmNames, mainLayouter, supplementaryLayouter) {
     const snrBuffer = new ArrayBuffer(15000000);
     const snr = new DataView(snrBuffer);
 
@@ -13,9 +13,9 @@ function compileSnr(precompiled, val1, val2, firstTable, bgmNames, layouter) {
     const tables = precompiled.tables;
 
     // Tables
-    snrPos = writeTable(snr, snrPos, tables.masks, 0x24, true, layouter);
-    snrPos = writeTable(snr, snrPos, tables.bgs, 0x28, true, layouter);
-    snrPos = writeTable(snr, snrPos, tables.bustups, 0x2c, true, layouter);
+    snrPos = writeTable(snr, snrPos, tables.masks, 0x24, true, supplementaryLayouter);
+    snrPos = writeTable(snr, snrPos, tables.bgs, 0x28, true, supplementaryLayouter);
+    snrPos = writeTable(snr, snrPos, tables.bustups, 0x2c, true, supplementaryLayouter);
 
     // BGM
     const bgmStart = snrPos;
@@ -34,15 +34,15 @@ function compileSnr(precompiled, val1, val2, firstTable, bgmNames, layouter) {
     snrPos = align(snrPos, 0x3);
 
     // Remaining tables
-    snrPos = writeTable(snr, snrPos, tables.ses, 0x34, true, layouter);
-    snrPos = writeTable(snr, snrPos, tables.movies, 0x38, true, layouter);
-    snrPos = writeTable(snr, snrPos, tables.voices, 0x3c, true, layouter);
-    snrPos = writeTable(snr, snrPos, tables.table8, 0x40, false, layouter);
-    snrPos = writeTable(snr, snrPos, tables.table9, 0x44, false, layouter);
-    snrPos = writeTable(snr, snrPos, tables.offset10, 0x48, true, layouter);
-    snrPos = writeTable(snr, snrPos, tables.characters, 0x4c, true, layouter);
-    snrPos = writeTable(snr, snrPos, tables.offset12, 0x50, true, layouter);
-    snrPos = writeTable(snr, snrPos, tables.tips, 0x54, true, layouter);
+    snrPos = writeTable(snr, snrPos, tables.ses, 0x34, true, supplementaryLayouter);
+    snrPos = writeTable(snr, snrPos, tables.movies, 0x38, true, supplementaryLayouter);
+    snrPos = writeTable(snr, snrPos, tables.voices, 0x3c, true, supplementaryLayouter);
+    snrPos = writeTable(snr, snrPos, tables.table8, 0x40, false, supplementaryLayouter);
+    snrPos = writeTable(snr, snrPos, tables.table9, 0x44, false, supplementaryLayouter);
+    snrPos = writeTable(snr, snrPos, tables.offset10, 0x48, true, supplementaryLayouter);
+    snrPos = writeTable(snr, snrPos, tables.characters, 0x4c, true, supplementaryLayouter);
+    snrPos = writeTable(snr, snrPos, tables.offset12, 0x50, true, supplementaryLayouter);
+    snrPos = writeTable(snr, snrPos, tables.tips, 0x54, true, supplementaryLayouter);
 
     // Script
     if(precompiled.mode == 'kal') {
@@ -70,7 +70,7 @@ function compileSnr(precompiled, val1, val2, firstTable, bgmNames, layouter) {
             labelRefs[element.name].push(snrPos);
             snrPos += 4;
         } else if(element.type === 'dialogue') {
-            snrPos = writeDialogue(snr, snrPos, element, layouter);
+            snrPos = writeDialogue(snr, snrPos, element, mainLayouter);
         } else {
             snrPos = writeBytes(snr, snrPos, element);
         }
