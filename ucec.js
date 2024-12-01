@@ -432,8 +432,8 @@ function patchFileInRom(romFile, path, newDataSource) {
                 if(fileToEdit.isFolder) throw new Error('Tried to overwrite folder with file');
 
                 // Change file
-                file.token = token;
-                file.dataProvider = newDataSource;
+                fileToEdit.token = token;
+                fileToEdit.dataProvider = newDataSource;
             }
 
             // Otherwise, nothing to do. We'll resolve the folder in the next iteration

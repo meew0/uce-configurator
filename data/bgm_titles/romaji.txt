@@ -110,7 +110,7 @@ umib_110	Kururi
 umib_111	Future
 umib_112	Aoiro no Reishou
 umib_113	Meitantei wa Shitteiru
-umib_114	Eminaki Soirée
+umib_114	Eminaki Soir@u233.e
 umib_115	one
 umib_116	Rasen
 umib_117	Gengaku Sanjuu Soukyoku Dai-6-oku-ban Eihetanchou

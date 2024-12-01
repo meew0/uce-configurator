@@ -98,16 +98,25 @@
                 }
             }
 
-            async function fetchFont(path) {
+            async function fetchCompressedData(url) {
                 const ds = new DecompressionStream("gzip");
-                const response = await fetch(path);
-                const decompressedStream = response.body.pipeThrough(ds);
+                const response = await fetch(url);
+                return response.body.pipeThrough(ds);
+            }
+
+            async function fetchFont(path) {
+                const decompressedStream = await fetchCompressedData(path);
                 return await new Response(decompressedStream).blob();
             }
 
             async function fetchNewrodin() {
                 regularFnt = await fetchFont('data/fonts/newrodin-medium.fnt.gz');
-                boldFnt = await fetchFont('data/fonts/newrodin-medium.fnt.gz');
+                boldFnt = await fetchFont('data/fonts/newrodin-bold.fnt.gz');
+            }
+
+            async function fetchArno() {
+                regularFnt = await fetchFont('data/fonts/arnopro-regular.fnt.gz');
+                boldFnt = await fetchFont('data/fonts/arnopro-bold.fnt.gz');
             }
 
             async function readRom() {
@@ -149,25 +158,38 @@
             var scenario;
 
             async function readScenario() {
-                const ds = new DecompressionStream("gzip");
-                const response = await fetch('data/main_snr.json.gz');
-                const decompressedStream = response.body.pipeThrough(ds);
-                scenario = await new Response(decompressedStream).json();
+                const stream = await fetchCompressedData('data/main_snr.json.gz');
+                scenario = await new Response(stream).json();
                 console.log(`Read scenario (${scenario.dialogueLineCount} dialogue lines)`);
             }
 
-            async function writeSnr() {
-                if(regularFnt == undefined) {
-                    await fetchNewrodin();
-                }
+            async function readReplacementFile(blob) {
+                const text = await blob.text(); // Read file as text
+                const contentLines = text.split('\n')
+                    .map(line => line.trim()) // Trim whitespace
+                    .filter(line => line && !line.startsWith('#')); // Filter out empty and comment lines
 
-                const layouter = new WordWrapLayouter(await readFntFile(regularFnt, false), await readFntFile(boldFnt, false));
-                const compiled = compileSnr(scenario, 6, 19, 88, {}, layouter);
+                // Separate main data and deduplication lines
+                const mainData = [];
+                const deduplicationMap = new Map();
 
-                const newHandle = await window.showSaveFilePicker();
-                const writableStream = await newHandle.createWritable();
-                await writableStream.write(compiled);
-                await writableStream.close();
+                contentLines.forEach(line => {
+                    const [a, b] = line.split('\t');
+                    if(b.startsWith('→')) {
+                        deduplicationMap.set(a, b);
+                    } else {
+                        mainData.push([a, b]);
+                    }
+                });
+
+                const resultObject = Object.fromEntries(mainData);
+
+                // Resolve deduplications
+                deduplicationMap.forEach((to, from) => {
+                    resultObject[from] = resultObject[to];
+                });
+
+                return resultObject;
             }
 
             var patchRomFile;
@@ -186,8 +208,7 @@
                 try {
                     patchRomFile = await readRomFile(file);
                 } catch(e) {
-                    romFileStatus.classList.add("error");
-                    romFileStatus.textContent = "Error while reading ROM file (see console for details)";
+                    romFileStatus.textContent = '<span class="error">Error while reading ROM file (see console for details)</span>';
                     console.log(e);
                 }
 
@@ -227,6 +248,65 @@
                 fileSelector.disabled = false;
                 romFileStatus.style.display = "";
             }
+
+            async function exportModifiedRom() {
+                const status = document.getElementById("exportStatus");
+                status.textContent = "Loading script to use for patching...";
+                status.style.display = "";
+
+                await readScenario();
+
+                const selectedFontElement = document.querySelector('input[name="font"]:checked');
+                const selectedFont = (selectedFontElement == undefined) ? 'newrodin' : selectedFontElement.value;
+
+                status.textContent = "Loading fonts...";
+                if(selectedFont === 'newrodin') {
+                    await fetchNewrodin();
+                } else if(selectedFont === 'arno') {
+                    await fetchArno();
+                } else {
+                    // custom
+                    regularFnt = document.getElementById("fontCustomFileRegular").files[0];
+                    boldFnt = document.getElementById("fontCustomFileBold").files[0];
+                }
+
+                if(regularFnt == undefined || boldFnt == undefined) {
+                    status.innerHTML = '<span class="error">Failed to load fonts!</span>';
+                    return;
+                }
+
+                status.textContent = "Loading BGM title replacement file...";
+                const selectedBgmElement = document.querySelector('input[name="bgm"]:checked');
+                const selectedBgm = (selectedBgmElement == undefined) ? 'uce' : selectedBgmElement.value;
+                let bgmReplacement;
+
+                if(selectedBgm === 'custom') {
+                    const customFile = document.getElementById("fontCustomFileRegular").files[0];
+                    if(customFile == undefined) {
+                        status.innerHTML = '<span class="error">No custom BGM replacement file selected!</span>';
+                        return;
+                    }
+                    bgmReplacement = await readReplacementFile(customFile);
+                } else {
+                    const response = await fetch(`data/bgm_titles/${selectedBgm}.txt`);
+                    bgmReplacement = await readReplacementFile(response);
+                }
+
+                console.log(bgmReplacement);
+
+                status.textContent = "Creating layouter...";
+                const layouter = new WordWrapLayouter(await readFntFile(regularFnt, false), await readFntFile(boldFnt, false));
+
+                status.textContent = "Compiling SNR...";
+                const compiled = compileSnr(scenario, 6, 19, 88, bgmReplacement, layouter);
+
+                status.textContent = "Patching and writing ROM file...";
+                patchFileInRom(patchRomFile, ['main.snr'], new FileDataSource(new Blob([compiled])));
+                patchFileInRom(patchRomFile, ['newrodin-medium.fnt'], new FileDataSource(regularFnt));
+                patchFileInRom(patchRomFile, ['newrodin-bold.fnt'], new FileDataSource(boldFnt));
+
+                await selectAndWriteRomFile(patchRomFile);
+            }
         </script>
 
         <section>
@@ -258,7 +338,7 @@
 
             <p>Change the language BGM titles are displayed in.</p>
 
-            <input type="radio" id="bgmTranslated" name="bgm" value="translated" checked />
+            <input type="radio" id="bgmTranslated" name="bgm" value="uce" checked />
             <label for="bgmTranslated">Translated (e.g. “Door to Summer”, “System Zero”)</label>
             <br>
             <input type="radio" id="bgmRomaji" name="bgm" value="romaji" />
@@ -310,7 +390,9 @@
         </section>
 
         <section>
-            <button onclick="0" id="exportButton" disabled>Export customized patch.rom</button>
+            <button onclick="exportModifiedRom()" id="exportButton" disabled>Export customized patch.rom</button>
+
+            <p id="exportStatus" style="display: none;"></p>
         </section>
     </body>
 </html>
