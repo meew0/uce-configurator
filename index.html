@@ -1,283 +1,302 @@
 <!doctype html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <title>Umineko Catbox English configurator</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-        <style>
-            body {
-                background-repeat: no-repeat;
-                background-attachment: fixed;
-                background-position: center;
-                background-size: cover;
-                padding-bottom: 20vh;
-                font-family: "PT Serif", serif;
-                background-color: #330202;
-                color: #f0bd5b;
-            }
 
-            a, a:visited {
-                color: #ff1800;
-            }
+<head>
+    <meta charset="utf-8">
+    <title>Umineko Catbox English configurator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-position: center;
+            background-size: cover;
+            padding-bottom: 20vh;
+            font-family: "PT Serif", serif;
+            background-color: #330202;
+            color: #f0bd5b;
+        }
 
-            h1, h2, h3 {
-                text-shadow: #f0bd5b77 0 0 10px;
-                color: #f7ae3e;
-            }
+        a,
+        a:visited {
+            color: #ff1800;
+        }
 
-            hr {
-                background-color: #f7ae3e;
-                border-color: #f7ae3e;
-            }
+        h1,
+        h2,
+        h3 {
+            text-shadow: #f0bd5b77 0 0 10px;
+            color: #f7ae3e;
+        }
 
-            section {
-                margin-left: calc(max(10px, 40vw - 200px));
-                padding-right: calc(max(10px, 40vw - 200px));
-            }
+        hr {
+            background-color: #f7ae3e;
+            border-color: #f7ae3e;
+        }
 
-            label.multiline {
-                display: inline-block;
-                vertical-align: top;
-            }
+        section {
+            margin-left: calc(max(10px, 40vw - 200px));
+            padding-right: calc(max(10px, 40vw - 200px));
+        }
 
-            hr { margin: 2em 0; }
+        label.multiline {
+            display: inline-block;
+            vertical-align: top;
+        }
 
-            input, button, textarea, select {
-                font: inherit;
-            }
+        hr {
+            margin: 2em 0;
+        }
 
-            button:disabled {
-                color: #322;
-            }
+        input,
+        button,
+        textarea,
+        select {
+            font: inherit;
+        }
 
-            .error, .warning {
-                color: #fff;
-            }
-        </style>
-    </head>
-    <body>
-        <script type="text/javascript" charset="utf-8" src="./utils.js"></script>
-        <script type="text/javascript" charset="utf-8" src="./binl_md5.js"></script>
-        <script type="text/javascript" charset="utf-8" src="./shift_jis.js"></script>
-        <script type="text/javascript" charset="utf-8" src="./ucec.js"></script>
-        <script type="text/javascript" charset="utf-8" src="./fnt.js"></script>
-        <script type="text/javascript" charset="utf-8" src="./layout.js"></script>
-        <script type="text/javascript" charset="utf-8" src="./snr.js"></script>
-        <script type="text/javascript">
-            const romPickerOptions = {
-                types: [
-                    {
-                        description: "shin engine ROM files",
-                        accept: {
-                            "application/x-shin-rom": ".rom"
-                        }
-                    }
-                ]
-            };
+        button:disabled {
+            color: #322;
+        }
 
-            const fntPickerOptions = {
-                types: [
-                    {
-                        description: "shin engine font files",
-                        accept: {
-                            "application/x-shin-fnt": ".fnt"
-                        }
-                    }
-                ]
-            };
+        .error,
+        .warning {
+            color: #fff;
+        }
+    </style>
+</head>
 
-            var regularFnt, boldFnt;
-
-            async function selectFileAsBlob(pickerOptions) {
-                const [file] = await window.showOpenFilePicker(pickerOptions);
-                return await file.getFile();
-            }
-
-            async function selectAndReadRomFile() {
-                return await readRomFile(await selectFileAsBlob(romPickerOptions));
-            }
-
-            async function selectAndWriteRomFile(romFile) {
-                const newHandle = await window.showSaveFilePicker();
-                const writableStream = await newHandle.createWritable();
-                await writeRomFile(writableStream, romFile);
-                await writableStream.close();
-            }
-
-            async function* getFilesRecursively(entry, base) {
-                // Skip first level
-                let relativePath = base == null ? [] : base.concat([entry.name]);
-
-                if (entry.kind === "file") {
-                    const file = await entry.getFile();
-                    if (file !== null) {
-                        file.relativePath = relativePath;
-                        yield file;
-                    }
-                } else if (entry.kind === "directory") {
-                    for await (const handle of entry.values()) {
-                        yield* getFilesRecursively(handle, relativePath);
+<body>
+    <script type="text/javascript" charset="utf-8" src="./utils.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./binl_md5.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./shift_jis.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./ucec.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./fnt.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./layout.js"></script>
+    <script type="text/javascript" charset="utf-8" src="./snr.js"></script>
+    <script type="text/javascript">
+        const romPickerOptions = {
+            types: [
+                {
+                    description: "shin engine ROM files",
+                    accept: {
+                        "application/x-shin-rom": ".rom"
                     }
                 }
-            }
+            ]
+        };
 
-            async function fetchCompressedData(url) {
-                const ds = new DecompressionStream("gzip");
-                const response = await fetch(url);
-                return response.body.pipeThrough(ds);
-            }
-
-            async function fetchFont(path) {
-                const decompressedStream = await fetchCompressedData(path);
-                return await new Response(decompressedStream).blob();
-            }
-
-            var newrodinRegular, newrodinBold;
-
-            async function fetchNewrodin() {
-                newrodinRegular = regularFnt = await fetchFont('data/fonts/newrodin-medium.fnt.gz');
-                newrodinBold = boldFnt = await fetchFont('data/fonts/newrodin-bold.fnt.gz');
-            }
-
-            async function fetchArno() {
-                regularFnt = await fetchFont('data/fonts/arnopro-regular.fnt.gz');
-                boldFnt = await fetchFont('data/fonts/arnopro-bold.fnt.gz');
-            }
-
-            async function readRom() {
-                console.log(await selectAndReadRomFile());
-            }
-
-            async function rewriteRom() {
-                const romFile = await selectAndReadRomFile();
-                console.log(romFile);
-                await selectAndWriteRomFile(romFile);
-            }
-
-            async function loadFonts() {
-                regularFnt = await selectFileAsDataSource(fntPickerOptions);
-                boldFnt = await selectFileAsDataSource(fntPickerOptions);
-            }
-
-            async function changeFonts() {
-                const romFile = await selectAndReadRomFile();
-
-                patchFileInRom(romFile, ['newrodin-medium.fnt'], new FileDataSource(regularFnt));
-                patchFileInRom(romFile, ['newrodin-bold.fnt'], new FileDataSource(boldFnt));
-                console.log(romFile);
-
-                await selectAndWriteRomFile(romFile);
-            }
-
-            async function dirToRom() {
-                const directory = await window.showDirectoryPicker();
-                const romFile = newRomFile();
-                for await (const file of getFilesRecursively(directory)) {
-                    const dataSource = new FileDataSource(file);
-                    patchFileInRom(romFile, file.relativePath, dataSource);
+        const fntPickerOptions = {
+            types: [
+                {
+                    description: "shin engine font files",
+                    accept: {
+                        "application/x-shin-fnt": ".fnt"
+                    }
                 }
-                console.log(romFile);
-                await selectAndWriteRomFile(romFile);
-            }
+            ]
+        };
 
-            var scenario;
+        var regularFnt, boldFnt;
 
-            async function readScenario() {
-                const stream = await fetchCompressedData('data/main_snr.json.gz');
-                scenario = await new Response(stream).json();
-                console.log(`Read scenario (${scenario.dialogueLineCount} dialogue lines)`);
-            }
+        async function selectFileAsBlob(pickerOptions) {
+            const [file] = await window.showOpenFilePicker(pickerOptions);
+            return await file.getFile();
+        }
 
-            async function readReplacementFile(blob) {
-                const text = await blob.text(); // Read file as text
-                const contentLines = text.split('\n')
-                    .map(line => line.trim()) // Trim whitespace
-                    .filter(line => line && !line.startsWith('#')); // Filter out empty and comment lines
+        async function selectAndReadRomFile() {
+            return await readRomFile(await selectFileAsBlob(romPickerOptions));
+        }
 
-                // Separate main data and deduplication lines
-                const mainData = [];
-                const deduplicationMap = new Map();
+        async function selectAndWriteRomFile(romFile) {
+            const newHandle = await window.showSaveFilePicker();
+            const writableStream = await newHandle.createWritable();
+            await writeRomFile(writableStream, romFile);
+            await writableStream.close();
+        }
 
-                contentLines.forEach(line => {
-                    const [a, b] = line.split('\t');
-                    if(b.startsWith('→')) {
-                        deduplicationMap.set(a, b);
-                    } else {
-                        mainData.push([a, b]);
-                    }
-                });
+        async function* getFilesRecursively(entry, base) {
+            // Skip first level
+            let relativePath = base == null ? [] : base.concat([entry.name]);
 
-                const resultObject = Object.fromEntries(mainData);
-
-                // Resolve deduplications
-                deduplicationMap.forEach((to, from) => {
-                    resultObject[from] = resultObject[to];
-                });
-
-                return resultObject;
-            }
-
-            var patchRomFile;
-
-            const WARNING = '<span class="warning">WARNING:</span>';
-
-            async function selectPatchRom() {
-                const fileSelector = document.getElementById("patchRomFile");
-                const file = fileSelector.files[0];
-                const romFileStatus = document.getElementById("romFileStatus");
-
-                fileSelector.disabled = true;
-                romFileStatus.innerHTML = "<marquee>Loading ROM file, this may take a while...</marquee>";
-                romFileStatus.style.display = "";
-
-                try {
-                    patchRomFile = await readRomFile(file);
-                } catch(e) {
-                    romFileStatus.innerHTML = '<span class="error">ERROR:</span> Could not read ROM file (see console for details)';
-                    console.log(e);
+            if (entry.kind === "file") {
+                const file = await entry.getFile();
+                if (file !== null) {
+                    file.relativePath = relativePath;
+                    yield file;
                 }
+            } else if (entry.kind === "directory") {
+                for await (const handle of entry.values()) {
+                    yield* getFilesRecursively(handle, relativePath);
+                }
+            }
+        }
 
-                if(patchRomFile != undefined) {
-                    console.log(patchRomFile);
-                    const warnings = [];
+        async function fetchCompressedData(url) {
+            const ds = new DecompressionStream("gzip");
+            const response = await fetch(url);
+            return response.body.pipeThrough(ds);
+        }
 
-                    if(patchRomFile.totalFileCount !== 203 || patchRomFile.totalFolderCount !== 3) {
-                        warnings.push(`${WARNING} Expected 203 files and 3 folders`);
-                    }
+        async function fetchFont(path) {
+            const decompressedStream = await fetchCompressedData(path);
+            return await new Response(decompressedStream).blob();
+        }
 
-                    let mainSnr;
-                    for(const file of patchRomFile.folders[0]) {
-                        if(file.name === "main.snr" && !file.isFolder) mainSnr = file;
-                    }
+        var newrodinRegular, newrodinBold;
 
-                    if(mainSnr == undefined) warnings.push(`${WARNING} Could not find main.snr`);
-                    else if(mainSnr.length !== 13099201) warnings.push(`${WARNING} Expected main.snr to be exactly 13099201 bytes`);
+        async function fetchNewrodin() {
+            newrodinRegular = regularFnt = await fetchFont('data/fonts/newrodin-medium.fnt.gz');
+            newrodinBold = boldFnt = await fetchFont('data/fonts/newrodin-bold.fnt.gz');
+        }
 
-                    const fileInfo = `${patchRomFile.totalFileCount} file${patchRomFile.totalFileCount == 1 ? '' : 's'} and ${patchRomFile.totalFolderCount} folder${patchRomFile.totalFolderCount == 1 ? '' : 's'}`
+        async function fetchArno() {
+            regularFnt = await fetchFont('data/fonts/arnopro-regular.fnt.gz');
+            boldFnt = await fetchFont('data/fonts/arnopro-bold.fnt.gz');
+        }
 
-                    if(warnings.length != 0) {
-                        const firstLine = `Found ${fileInfo}.`;
-                        const lastLine = "You may have loaded a patch.rom file from an old version of UCE, or one that is not from UCE at all. This tool will still work, but results may be unexpected.";
-                        warnings.push(lastLine);
-                        warnings.unshift(firstLine);
-                        romFileStatus.innerHTML = warnings.join("<br>");
-                    } else {
-                        romFileStatus.textContent = `Successfully loaded ROM file with ${fileInfo}.`;
-                    }
+        async function readRom() {
+            console.log(await selectAndReadRomFile());
+        }
 
-                    document.getElementById("exportButton").disabled = false;
+        async function rewriteRom() {
+            const romFile = await selectAndReadRomFile();
+            console.log(romFile);
+            await selectAndWriteRomFile(romFile);
+        }
+
+        async function loadFonts() {
+            regularFnt = await selectFileAsDataSource(fntPickerOptions);
+            boldFnt = await selectFileAsDataSource(fntPickerOptions);
+        }
+
+        async function changeFonts() {
+            const romFile = await selectAndReadRomFile();
+
+            patchFileInRom(romFile, ['newrodin-medium.fnt'], new FileDataSource(regularFnt));
+            patchFileInRom(romFile, ['newrodin-bold.fnt'], new FileDataSource(boldFnt));
+            console.log(romFile);
+
+            await selectAndWriteRomFile(romFile);
+        }
+
+        async function dirToRom() {
+            const directory = await window.showDirectoryPicker();
+            const romFile = newRomFile();
+            for await (const file of getFilesRecursively(directory)) {
+                const dataSource = new FileDataSource(file);
+                patchFileInRom(romFile, file.relativePath, dataSource);
+            }
+            console.log(romFile);
+            await selectAndWriteRomFile(romFile);
+        }
+
+        var scenario;
+
+        async function readScenario() {
+            const stream = await fetchCompressedData('data/main_snr.json.gz');
+            scenario = await new Response(stream).json();
+            console.log(`Read scenario (${scenario.dialogueLineCount} dialogue lines)`);
+        }
+
+        async function readReplacementFile(blob) {
+            const text = await blob.text(); // Read file as text
+            const contentLines = text.split('\n')
+                .map(line => line.trim()) // Trim whitespace
+                .filter(line => line && !line.startsWith('#')); // Filter out empty and comment lines
+
+            // Separate main data and deduplication lines
+            const mainData = [];
+            const deduplicationMap = new Map();
+
+            contentLines.forEach(line => {
+                const [a, b] = line.split('\t');
+                if (b.startsWith('→')) {
+                    deduplicationMap.set(a, b);
                 } else {
-                    document.getElementById("exportButton").disabled = true;
+                    mainData.push([a, b]);
                 }
+            });
 
-                fileSelector.disabled = false;
-                romFileStatus.style.display = "";
+            const resultObject = Object.fromEntries(mainData);
+
+            // Resolve deduplications
+            deduplicationMap.forEach((to, from) => {
+                resultObject[from] = resultObject[to];
+            });
+
+            return resultObject;
+        }
+
+        var patchRomFile;
+
+        const WARNING = '<span class="warning">WARNING:</span>';
+
+        async function selectPatchRom() {
+            const fileSelector = document.getElementById("patchRomFile");
+            const file = fileSelector.files[0];
+            const romFileStatus = document.getElementById("romFileStatus");
+
+            fileSelector.disabled = true;
+            romFileStatus.innerHTML = "<marquee>Loading ROM file, this may take a while...</marquee>";
+            romFileStatus.style.display = "";
+
+            try {
+                patchRomFile = await readRomFile(file);
+            } catch (e) {
+                romFileStatus.innerHTML = '<span class="error">ERROR:</span> Could not read ROM file (see console for details)';
+                console.log(e);
             }
 
-            async function exportModifiedRom() {
-                const status = document.getElementById("exportStatus");
+            if (patchRomFile != undefined) {
+                console.log(patchRomFile);
+                const warnings = [];
+
+                if (patchRomFile.totalFileCount !== 203 || patchRomFile.totalFolderCount !== 3) {
+                    warnings.push(`${WARNING} Expected 203 files and 3 folders`);
+                }
+
+                let mainSnr;
+                for (const file of patchRomFile.folders[0]) {
+                    if (file.name === "main.snr" && !file.isFolder) mainSnr = file;
+                }
+
+                if (mainSnr == undefined) warnings.push(`${WARNING} Could not find main.snr`);
+                else if (mainSnr.length !== 13099201) warnings.push(`${WARNING} Expected main.snr to be exactly 13099201 bytes`);
+
+                const fileInfo = `${patchRomFile.totalFileCount} file${patchRomFile.totalFileCount == 1 ? '' : 's'} and ${patchRomFile.totalFolderCount} folder${patchRomFile.totalFolderCount == 1 ? '' : 's'}`
+
+                if (warnings.length != 0) {
+                    const firstLine = `Found ${fileInfo}.`;
+                    const lastLine = "You may have loaded a patch.rom file from an old version of UCE, or one that is not from UCE at all. This tool will still work, but results may be unexpected.";
+                    warnings.push(lastLine);
+                    warnings.unshift(firstLine);
+                    romFileStatus.innerHTML = warnings.join("<br>");
+                } else {
+                    romFileStatus.textContent = `Successfully loaded ROM file with ${fileInfo}.`;
+                }
+
+                document.getElementById("exportButton").disabled = false;
+            } else {
+                document.getElementById("exportButton").disabled = true;
+            }
+
+            fileSelector.disabled = false;
+            romFileStatus.style.display = "";
+        }
+
+        var exportReady = false;
+
+        async function exportModifiedRom() {
+            const status = document.getElementById("exportStatus");
+            const button = document.getElementById("exportButton");
+
+            button.disabled = true;
+
+            if (!exportReady) {
                 status.textContent = "Loading script to use for patching...";
                 status.style.display = "";
 
@@ -289,14 +308,14 @@
                 await fetchNewrodin(); // we always need this for the tips
 
                 status.textContent = "Loading fonts...";
-                if(selectedFont === 'arno') {
+                if (selectedFont === 'arno') {
                     await fetchArno();
-                } else if(selectedFont === 'custom') {
+                } else if (selectedFont === 'custom') {
                     regularFnt = document.getElementById("fontCustomFileRegular").files[0];
                     boldFnt = document.getElementById("fontCustomFileBold").files[0];
                 }
 
-                if(regularFnt == undefined || boldFnt == undefined || newrodinRegular == undefined || newrodinBold == undefined) {
+                if (regularFnt == undefined || boldFnt == undefined || newrodinRegular == undefined || newrodinBold == undefined) {
                     status.innerHTML = '<span class="error">Failed to load fonts!</span>';
                     return;
                 }
@@ -306,9 +325,9 @@
                 const selectedBgm = (selectedBgmElement == undefined) ? 'uce' : selectedBgmElement.value;
                 let bgmReplacement;
 
-                if(selectedBgm === 'custom') {
+                if (selectedBgm === 'custom') {
                     const customFile = document.getElementById("fontCustomFileRegular").files[0];
-                    if(customFile == undefined) {
+                    if (customFile == undefined) {
                         status.innerHTML = '<span class="error">No custom BGM replacement file selected!</span>';
                         return;
                     }
@@ -327,117 +346,158 @@
                 status.textContent = "Compiling SNR...";
                 const compiled = compileSnr(scenario, 6, 19, 88, bgmReplacement, mainLayouter, supplementaryLayouter);
 
-                status.textContent = "Patching and writing ROM file...";
+                status.textContent = "Patching ROM file...";
                 patchFileInRom(patchRomFile, ['main.snr'], new FileDataSource(new Blob([compiled])));
                 patchFileInRom(patchRomFile, ['newrodin-medium.fnt'], new FileDataSource(regularFnt));
                 patchFileInRom(patchRomFile, ['newrodin-bold.fnt'], new FileDataSource(boldFnt));
 
+                status.textContent = "ROM file successfully patched. Ready to save.";
+                exportReady = true;
+            }
+
+            try {
                 await selectAndWriteRomFile(patchRomFile);
+            } catch (e) {
+                if (e instanceof SecurityError) {
+                    status.textContent = "Press the button again to save the patched ROM file.";
+                    button.textContent = "Export patched ROM file";
+                    button.disabled = false;
+                    return;
+                } else {
+                    throw e;
+                }
             }
-        </script>
 
-        <section>
-            <h1>Umineko Catbox English configurator</h1>
+            status.style.display = "none";
+            button.textContent = "Generate customized patch.rom";
+            button.disabled = false;
+            exportReady = false;
+        }
+    </script>
 
-            <small>by <a href="https://github.com/meew0">meew0 / Neurochitin</a>  ·  <a href="https://github.com/meew0/uce-configurator">Project on GitHub</a></small>
+    <section>
+        <h1>Umineko Catbox English configurator</h1>
 
-            <p>
-                This tool allows you to change a few aesthetic details of <a href="https://andolga.github.io/umineko-catbox-english/">Umineko Catbox English</a>, the unofficial English patch for the Nintendo Switch version of the visual novel <a href="https://vndb.org/v24">Umineko no Naku Koro ni</a>.
-            </p>
+        <small>by <a href="https://github.com/meew0">meew0 / Neurochitin</a> · <a
+                href="https://github.com/meew0/uce-configurator">Project on GitHub</a></small>
 
-            <details>
-                <summary>How to use</summary>
-                First, install UCE normally according to <a href="https://andolga.github.io/umineko-catbox-english/#applying-the-patch">the instructions</a> for whatever system you are using. The process will involve extracting some folders containing a file called “patch.rom”. Press the button on the file selector below and select that file. Then, make adjustments as desired, and use the export button to create a new patch.rom file. Finally, replace the old patch.rom file with the new one you downloaded.
-            </details>
+        <p>
+            This tool allows you to change a few aesthetic details of <a
+                href="https://andolga.github.io/umineko-catbox-english/">Umineko Catbox English</a>, the unofficial
+            English patch for the Nintendo Switch version of the visual novel <a href="https://vndb.org/v24">Umineko no
+                Naku Koro ni</a>.
+        </p>
 
-            <div id="unsupportedBrowserWarning" style="display: none;">
-                <hr>
+        <details>
+            <summary>How to use</summary>
+            First, install UCE normally according to <a
+                href="https://andolga.github.io/umineko-catbox-english/#applying-the-patch">the instructions</a> for
+            whatever system you are using. The process will involve extracting some folders containing a file called
+            “patch.rom”. Press the button on the file selector below and select that file. Then, make adjustments as
+            desired, and use the export button to create a new patch.rom file. Finally, replace the old patch.rom file
+            with the new one you downloaded.
+        </details>
 
-                <p><span class="warning">UNSUPPORTED BROWSER!</span> Saving the modified ROM file will not work.</p>
-
-                <details>
-                    <summary>More information</summary>
-                    At the time of writing, this tool only works on Chrome, Edge, and Opera. I am sorry, Firefox and Safari users — I use Firefox myself, but these browsers simply do not support the necessary APIs. Please bug Mozilla, or the vendor of whatever browser you are using, to support the full File System Access API, specifically <a href="https://caniuse.com/mdn-api_window_showsavefilepicker">showSaveFilePicker</a>.
-                </details>
-            </div>
-
+        <div id="unsupportedBrowserWarning" style="display: none;">
             <hr>
 
-            Select patch.rom: <input type="file" id="patchRomFile" name="patchRomFile" accept=".rom" onchange="selectPatchRom()" />
-
-            <p id="romFileStatus" style="display: none;"></p>
-
-            <hr>
-        </section>
-
-        <section>
-            <h2>Options</h2>
-            <h3>BGM names</h3>
-
-            <p>Change the language BGM titles are displayed in.</p>
-
-            <input type="radio" id="bgmTranslated" name="bgm" value="uce" checked />
-            <label for="bgmTranslated">Translated (e.g. “Door to Summer”, “System Zero”)</label>
-            <br>
-            <input type="radio" id="bgmRomaji" name="bgm" value="romaji" />
-            <label for="bgmRomaji">Rōmaji (e.g. “Natsu no Tobira”, “system0”)</label>
-            <br>
-            <input type="radio" id="bgmJapanese" name="bgm" value="japanese" />
-            <label for="bgmJapanese">Japanese (e.g. “夏の扉”, “システム零”)</label>
-            <br>
-            <input type="radio" id="bgmCustom" name="bgm" value="custom" />
-            <label for="bgmCustom">Custom: <input type="file" id="bgmCustomFile" name="bgmCustomFile" /></label>
+            <p><span class="warning">UNSUPPORTED BROWSER!</span> Saving the modified ROM file will not work.</p>
 
             <details>
-                <summary>More info on custom names</summary>
-                TBD
+                <summary>More information</summary>
+                At the time of writing, this tool only works on Chrome, Edge, and Opera. I am sorry, Firefox and Safari
+                users — I use Firefox myself, but these browsers simply do not support the necessary APIs. Please bug
+                Mozilla, or the vendor of whatever browser you are using, to support the full File System Access API,
+                specifically <a href="https://caniuse.com/mdn-api_window_showsavefilepicker">showSaveFilePicker</a>.
             </details>
-        </section>
+        </div>
 
-        <section>
-            <h3>Script font</h3>
+        <hr>
 
-            <p>Change the font in which dialogue lines, tips, and the like are displayed. Does not affect GUI buttons and prompts.</p>
+        Select patch.rom: <input type="file" id="patchRomFile" name="patchRomFile" accept=".rom"
+            onchange="selectPatchRom()" />
 
-            <input type="radio" id="fontNewrodin" name="font" value="newrodin" checked />
-            <label for="fontNewrodin">New Rodin (default Switch font)</label>
+        <p id="romFileStatus" style="display: none;"></p>
+
+        <hr>
+    </section>
+
+    <section>
+        <h2>Options</h2>
+        <h3>BGM names</h3>
+
+        <p>Change the language BGM titles are displayed in.</p>
+
+        <input type="radio" id="bgmTranslated" name="bgm" value="uce" checked />
+        <label for="bgmTranslated">Translated (e.g. “Door to Summer”, “System Zero”)</label>
+        <br>
+        <input type="radio" id="bgmRomaji" name="bgm" value="romaji" />
+        <label for="bgmRomaji">Rōmaji (e.g. “Natsu no Tobira”, “system0”)</label>
+        <br>
+        <input type="radio" id="bgmJapanese" name="bgm" value="japanese" />
+        <label for="bgmJapanese">Japanese (e.g. “夏の扉”, “システム零”)</label>
+        <br>
+        <input type="radio" id="bgmCustom" name="bgm" value="custom" />
+        <label for="bgmCustom">Custom: <input type="file" id="bgmCustomFile" name="bgmCustomFile" /></label>
+
+        <details>
+            <summary>More info on custom names</summary>
+            TBD
+        </details>
+    </section>
+
+    <section>
+        <h3>Script font</h3>
+
+        <p>Change the font in which dialogue lines, tips, and the like are displayed. Does not affect GUI buttons and
+            prompts.</p>
+
+        <input type="radio" id="fontNewrodin" name="font" value="newrodin" checked />
+        <label for="fontNewrodin">New Rodin (default Switch font)</label>
+        <br>
+        <input type="radio" id="fontArno" name="font" value="arno" />
+        <label for="fontArno">Arno Pro (Umineko Project font)</label>
+        <br>
+        <input type="radio" id="fontCustom" name="font" value="custom" />
+        <label for="fontCustom" class="multiline">
+            Custom
             <br>
-            <input type="radio" id="fontArno" name="font" value="arno" />
-            <label for="fontArno">Arno Pro (Umineko Project font)</label>
+            Regular weight: <input type="file" id="fontCustomFileRegular" name="fontCustomFileRegular" accept=".fnt" />
             <br>
-            <input type="radio" id="fontCustom" name="font" value="custom" />
-            <label for="fontCustom" class="multiline">
-                Custom
-                <br>
-                Regular weight: <input type="file" id="fontCustomFileRegular" name="fontCustomFileRegular" accept=".fnt" />
-                <br>
-                Bold: <input type="file" id="fontCustomFileBold" name="fontCustomFileBold" accept=".fnt" />
-            </label>
+            Bold: <input type="file" id="fontCustomFileBold" name="fontCustomFileBold" accept=".fnt" />
+        </label>
 
-            <details>
-                <summary>More info on custom fonts</summary>
-                This tool does not directly support normal font files, they must be converted to Entergram's .fnt format first. For now you can use <a href="https://gitlab.com/Neurochitin/kaleido/-/tree/saku/fnt?ref_type=heads">Kaleido</a> to do this (instructions TBD)
-            </details>
-        </section>
+        <details>
+            <summary>More info on custom fonts</summary>
+            This tool does not directly support normal font files, they must be converted to Entergram's .fnt format
+            first. For now you can use <a
+                href="https://gitlab.com/Neurochitin/kaleido/-/tree/saku/fnt?ref_type=heads">Kaleido</a> to do this
+            (instructions TBD)
+        </details>
+    </section>
 
-        <section style="display: none;"><!-- NYI -->
-            <h3>Additional tweaks</h3>
-            <input type="checkbox" id="smallCaps" name="smallCaps" />
-            <label for="smallCaps">Small caps tweak (e.g. BERNKASTEL → <span style="font-variant: small-caps;">Bernkastel</span>, as in Umineko Project). Requires Arno Pro or a suitably generated custom font to be selected above, otherwise names will simply disappear.</label>
-        </section>
+    <section style="display: none;"><!-- NYI -->
+        <h3>Additional tweaks</h3>
+        <input type="checkbox" id="smallCaps" name="smallCaps" />
+        <label for="smallCaps">Small caps tweak (e.g. BERNKASTEL → <span
+                style="font-variant: small-caps;">Bernkastel</span>, as in Umineko Project). Requires Arno Pro or a
+            suitably generated custom font to be selected above, otherwise names will simply disappear.</label>
+    </section>
 
-        <section>
-            <hr>
-            <p><span class="warning">NOTE:</span> Please save the file to a different location than the patch.rom you initially loaded, then move it to the correct location afterwards.</p>
-            <button onclick="exportModifiedRom()" id="exportButton" disabled>Export customized patch.rom</button>
+    <section>
+        <hr>
+        <p><span class="warning">NOTE:</span> Please save the file to a different location than the patch.rom you
+            initially loaded, then move it to the correct location afterwards.</p>
+        <button onclick="exportModifiedRom()" id="exportButton" disabled>Generate customized patch.rom</button>
 
-            <p id="exportStatus" style="display: none;"></p>
-        </section>
+        <p id="exportStatus" style="display: none;"></p>
+    </section>
 
-        <script type="text/javascript">
-            if(window.showSaveFilePicker == undefined) {
-                document.getElementById("unsupportedBrowserWarning").style.display = '';
-            }
-        </script>
-    </body>
+    <script type="text/javascript">
+        if (window.showSaveFilePicker == undefined) {
+            document.getElementById("unsupportedBrowserWarning").style.display = '';
+        }
+    </script>
+</body>
+
 </html>
