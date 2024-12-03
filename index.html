@@ -2,6 +2,10 @@
 <html>
     <head>
         <meta charset="utf-8">
+        <title>Umineko Catbox English configurator</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
         <style>
             body {
                 background-repeat: no-repeat;
@@ -9,6 +13,23 @@
                 background-position: center;
                 background-size: cover;
                 padding-bottom: 20vh;
+                font-family: "PT Serif", serif;
+                background-color: #330202;
+                color: #f0bd5b;
+            }
+
+            a, a:visited {
+                color: #ff1800;
+            }
+
+            h1, h2, h3 {
+                text-shadow: #f0bd5b77 0 0 10px;
+                color: #f7ae3e;
+            }
+
+            hr {
+                background-color: #f7ae3e;
+                border-color: #f7ae3e;
             }
 
             section {
@@ -23,12 +44,16 @@
 
             hr { margin: 2em 0; }
 
-            .error {
-                color: #f00;
+            input, button, textarea, select {
+                font: inherit;
             }
 
-            .warning {
-                color: #f80;
+            button:disabled {
+                color: #322;
+            }
+
+            .error, .warning {
+                color: #fff;
             }
         </style>
     </head>
@@ -210,7 +235,7 @@
                 try {
                     patchRomFile = await readRomFile(file);
                 } catch(e) {
-                    romFileStatus.textContent = '<span class="error">Error while reading ROM file (see console for details)</span>';
+                    romFileStatus.innerHTML = '<span class="error">ERROR:</span> Could not read ROM file (see console for details)';
                     console.log(e);
                 }
 
@@ -388,10 +413,11 @@
             <h3>Additional tweaks</h3>
             <input type="checkbox" id="smallCaps" name="smallCaps" />
             <label for="smallCaps">Small caps tweak (e.g. BERNKASTEL → <span style="font-variant: small-caps;">Bernkastel</span>, as in Umineko Project). Requires Arno Pro or a suitably generated custom font to be selected above, otherwise names will simply disappear.</label>
-            <hr>
         </section>
 
         <section>
+            <hr>
+            <p><span class="warning">NOTE:</span> Please save the file to a different location than the patch.rom you initially loaded, then move it to the correct location afterwards.</p>
             <button onclick="exportModifiedRom()" id="exportButton" disabled>Export customized patch.rom</button>
 
             <p id="exportStatus" style="display: none;"></p>
