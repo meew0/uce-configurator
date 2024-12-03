@@ -252,7 +252,6 @@
             }
 
             if (patchRomFile != undefined) {
-                console.log(patchRomFile);
                 const warnings = [];
 
                 if (patchRomFile.totalFileCount !== 203 || patchRomFile.totalFolderCount !== 3) {
@@ -337,8 +336,6 @@
                     bgmReplacement = await readReplacementFile(response);
                 }
 
-                console.log(bgmReplacement);
-
                 status.textContent = "Creating layouters...";
                 const mainLayouter = new WordWrapLayouter(await readFntFile(regularFnt, false), await readFntFile(boldFnt, false));
                 const supplementaryLayouter = new WordWrapLayouter(await readFntFile(newrodinRegular, false), await readFntFile(newrodinBold, false));
@@ -358,7 +355,7 @@
             try {
                 await selectAndWriteRomFile(patchRomFile);
             } catch (e) {
-                if (e instanceof SecurityError) {
+                if (e instanceof DOMException && e.name === "SecurityError") {
                     status.textContent = "Press the button again to save the patched ROM file.";
                     button.textContent = "Export patched ROM file";
                     button.disabled = false;
