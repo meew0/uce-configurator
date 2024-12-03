@@ -350,7 +350,18 @@
                 First, install UCE normally according to <a href="https://andolga.github.io/umineko-catbox-english/#applying-the-patch">the instructions</a> for whatever system you are using. The process will involve extracting some folders containing a file called “patch.rom”. Press the button on the file selector below and select that file. Then, make adjustments as desired, and use the export button to create a new patch.rom file. Finally, replace the old patch.rom file with the new one you downloaded.
             </details>
 
-            <br>
+            <div id="unsupportedBrowserWarning" style="display: none;">
+                <hr>
+
+                <p><span class="warning">UNSUPPORTED BROWSER!</span> Saving the modified ROM file will not work.</p>
+
+                <details>
+                    <summary>More information</summary>
+                    At the time of writing, this tool only works on Chrome, Edge, and Opera. I am sorry, Firefox and Safari users — I use Firefox myself, but these browsers simply do not support the necessary APIs. Please bug Mozilla, or the vendor of whatever browser you are using, to support the full File System Access API, specifically <a href="https://caniuse.com/mdn-api_window_showsavefilepicker">showSaveFilePicker</a>.
+                </details>
+            </div>
+
+            <hr>
 
             Select patch.rom: <input type="file" id="patchRomFile" name="patchRomFile" accept=".rom" onchange="selectPatchRom()" />
 
@@ -422,5 +433,11 @@
 
             <p id="exportStatus" style="display: none;"></p>
         </section>
+
+        <script type="text/javascript">
+            if(window.showSaveFilePicker == undefined) {
+                document.getElementById("unsupportedBrowserWarning").style.display = '';
+            }
+        </script>
     </body>
 </html>
